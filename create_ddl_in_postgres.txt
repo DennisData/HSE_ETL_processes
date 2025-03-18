@@ -1,0 +1,261 @@
+CREATE SCHEMA IF NOT EXISTS nosql;
+
+-- Таблица UserSessions
+CREATE TABLE nosql.UserSessions (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL,
+    session_id TEXT,
+    user_id TEXT,
+    start_time TIMESTAMP,
+    end_time TIMESTAMP,
+    pages_visited JSONB,
+    device JSONB,
+    actions JSONB
+);
+
+-- Таблица ProductPriceHistory
+CREATE TABLE nosql.ProductPriceHistory (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL,
+    product_id TEXT,
+    price_changes JSONB,
+    current_price NUMERIC,
+    currency TEXT
+);
+
+-- Таблица EventLogs
+CREATE TABLE nosql.EventLogs (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL,
+    event_id TEXT,
+    timestamp TIMESTAMP,
+    event_type TEXT,
+    details JSONB
+);
+
+-- Таблица SupportTickets
+CREATE TABLE nosql.SupportTickets (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL,
+    ticket_id TEXT,
+    user_id TEXT,
+    status TEXT,
+    issue_type TEXT,
+    messages JSONB,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+-- Таблица UserRecommendations
+CREATE TABLE nosql.UserRecommendations (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL,
+    user_id TEXT,
+    recommended_products JSONB,
+    last_updated TIMESTAMP
+);
+
+-- Таблица ModerationQueue
+CREATE TABLE nosql.ModerationQueue (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL,
+    review_id TEXT,
+    user_id TEXT,
+    product_id TEXT,
+    review_text TEXT,
+    rating INTEGER,
+    moderation_status TEXT,
+    flags JSONB,
+    submitted_at TIMESTAMP
+);
+
+-- Таблица SearchQueries
+CREATE TABLE nosql.SearchQueries (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL,
+    query_id TEXT,
+    user_id TEXT,
+    query_text TEXT,
+    timestamp TIMESTAMP,
+    filters JSONB,
+    results_count INTEGER
+);
+
+
+
+
+-- Таблица UserSessions_tmp
+CREATE TABLE nosql.UserSessions_tmp (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL
+);
+
+-- Таблица ProductPriceHistory_tmp
+CREATE TABLE nosql.ProductPriceHistory_tmp (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL
+);
+
+-- Таблица EventLogs_tmp
+CREATE TABLE nosql.EventLogs_tmp (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL
+);
+
+-- Таблица SupportTickets_tmp
+CREATE TABLE nosql.SupportTickets_tmp (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL
+);
+
+-- Таблица UserRecommendations_tmp
+CREATE TABLE nosql.UserRecommendations_tmp (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL
+);
+
+-- Таблица ModerationQueue_tmp
+CREATE TABLE nosql.ModerationQueue_tmp (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL
+);
+
+-- Таблица SearchQueries_tmp
+CREATE TABLE nosql.SearchQueries_tmp (
+    id SERIAL PRIMARY KEY,
+    json_data JSONB NOT NULL
+);
+
+
+
+
+
+
+
+
+
+
+
+SELECT * FROM nosql.UserSessions;
+
+
+
+INSERT INTO nosql.UserSessions (json_data, session_id, user_id, start_time, end_time, pages_visited, device, actions)
+SELECT json_data,
+    json_data->>'session_id',
+    json_data->>'user_id',
+    (json_data->>'start_time')::TIMESTAMP,
+    (json_data->>'end_time')::TIMESTAMP,
+    json_data->'pages_visited',
+    json_data->'device',
+    json_data->'actions'
+FROM nosql.UserSessions_tmp;
+
+INSERT INTO nosql.ProductPriceHistory (json_data, product_id, price_changes, current_price, currency)
+SELECT json_data,
+    json_data->>'product_id',
+    json_data->'price_changes',
+    (json_data->>'current_price')::NUMERIC,
+    json_data->>'currency'
+FROM nosql.ProductPriceHistory_tmp;
+
+
+INSERT INTO nosql.EventLogs (json_data, event_id, timestamp, event_type, details)
+SELECT json_data,
+    json_data->>'event_id',
+    (json_data->>'timestamp')::TIMESTAMP,
+    json_data->>'event_type',
+    json_data->'details'
+FROM nosql.EventLogs_tmp;
+
+
+INSERT INTO nosql.SupportTickets (json_data, ticket_id, user_id, status, issue_type, messages, created_at, updated_at)
+SELECT json_data,
+    json_data->>'ticket_id',
+    json_data->>'user_id',
+    json_data->>'status',
+    json_data->>'issue_type',
+    json_data->'messages',
+    (json_data->>'created_at')::TIMESTAMP,
+    (json_data->>'updated_at')::TIMESTAMP
+FROM nosql.SupportTickets_tmp;
+
+
+INSERT INTO nosql.UserRecommendations (json_data, user_id, recommended_products, last_updated)
+SELECT json_data,
+    json_data->>'user_id',
+    json_data->'recommended_products',
+    (json_data->>'last_updated')::TIMESTAMP
+FROM nosql.UserRecommendations_tmp;
+
+
+
+INSERT INTO nosql.ModerationQueue (json_data, review_id, user_id, product_id, review_text, rating, moderation_status, flags, submitted_at)
+SELECT json_data,
+    json_data->>'review_id',
+    json_data->>'user_id',
+    json_data->>'product_id',
+    json_data->>'review_text',
+    (json_data->>'rating')::INTEGER,
+    json_data->>'moderation_status',
+    json_data->'flags',
+    (json_data->>'submitted_at')::TIMESTAMP
+FROM nosql.ModerationQueue_tmp;
+
+
+
+INSERT INTO nosql.SearchQueries (json_data, query_id, user_id, query_text, timestamp, filters, results_count)
+SELECT json_data,
+    json_data->>'query_id',
+    json_data->>'user_id',
+    json_data->>'query_text',
+    (json_data->>'timestamp')::TIMESTAMP,
+    json_data->'filters',
+    (json_data->>'results_count')::INTEGER
+FROM nosql.SearchQueries_tmp;
+
+
+
+
+
+
+--Витрина: Статистика пользовательских сессий
+DROP MATERIALIZED VIEW nosql.session_analytics;
+CREATE MATERIALIZED VIEW nosql.session_analytics AS
+SELECT 
+    user_id,
+    COUNT(*) AS total_sessions,
+    AVG(EXTRACT(EPOCH FROM (end_time - start_time)))::INT AS avg_duration_seconds,
+    AVG(jsonb_array_length(pages_visited))::NUMERIC(5,1) AS avg_pages_visited,
+    MAX(end_time) AS last_session_date
+FROM nosql.UserSessions
+GROUP BY user_id;
+
+
+--Витрина: Анализ ценовой истории товаров
+DROP MATERIALIZED VIEW nosql.price_analytics;
+CREATE MATERIALIZED VIEW nosql.price_analytics AS
+SELECT 
+    product_id,
+    currency,
+    COUNT(*) AS price_changes_count,
+    MIN(current_price) AS min_price,
+    MAX(current_price) AS max_price,
+    AVG(current_price)::NUMERIC(10,2) AS avg_price,
+    jsonb_array_length(price_changes) AS history_length
+FROM nosql.ProductPriceHistory
+GROUP BY product_id, currency, jsonb_array_length(price_changes);
+
+
+
+SELECT *
+FROM nosql.session_analytics;
+
+SELECT *
+FROM nosql.price_analytics;
+
+
+
+
+
+
